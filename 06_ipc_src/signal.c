@@ -9,7 +9,6 @@ volatile sig_atomic_t signal_status = 0;  /* special type to safely change in
                                                 signal handlers */
 
 void signal_handler(int signal) {
-    printf("signal %d catched\n", signal);
     signal_status = signal;
 }
 
