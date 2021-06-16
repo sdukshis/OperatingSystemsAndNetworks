@@ -23,11 +23,15 @@ void exit_on_error(int err, char* msg) {
 
 void *thread_start(void *ticketsp) {
     struct tickets *tickersref = (struct tickets*)ticketsp;
-    while (tickersref->ntickets > 0) {
+    for(;;) {
         usleep(100);
         pthread_mutex_lock(&tickersref->mutex);
         if (tickersref->ntickets > 0) {
             --(tickersref->ntickets);
+        }
+        if (tickersref->ntickets == 0) {
+            pthread_mutex_unlock(&tickersref->mutex);
+            break;
         }
         pthread_mutex_unlock(&tickersref->mutex);
     }

@@ -50,7 +50,7 @@ int main (int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  err = listen(server_fd, 128);
+  err = listen(server_fd, 1);
   if (err < 0) {
     perror("listen");
     exit(EXIT_FAILURE);

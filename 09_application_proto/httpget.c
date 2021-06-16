@@ -14,7 +14,9 @@
 const size_t buff_size = 4096;
 
 const char *request_template = 
-"GET %s HTTP/1.0\r\n"
+"GET %s HTTP/1.1\r\n"
+"Host: %s\r\n"
+"Connection: close\r\n"
 "\r\n";
 
 const size_t request_size = 4096;
@@ -31,10 +33,10 @@ int main(int argc, char *argv[]) {
     struct addrinfo *result, *rp, hints;
     int sfd;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AF_UNSPEC;
+    hints.ai_flags = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = 0;
-    hints.ai_flags = 0;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_DEFAULT;
 
     int rv = getaddrinfo(hostname, "http", &hints, &result);
     if (rv != 0) {
@@ -50,7 +52,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         struct sockaddr_in *addr = (struct sockaddr_in *)rp->ai_addr;
-        printf("connectiong to %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+        printf("connecting to %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
         if (-1 == connect(sfd, rp->ai_addr, rp->ai_addrlen)) {
             perror("connect");
             continue;
@@ -68,17 +70,28 @@ int main(int argc, char *argv[]) {
     char request[request_size];
     
     rv = snprintf(request, request_size, request_template, 
-                    uri);
-    if (rv == -1) {
+                    uri, hostname);
+    if (rv < 0) {
         perror("snprintf");
         exit(EXIT_FAILURE);
     }
-    request[rv] = '\0';
-    printf("%s", request);
-    if (-1 == write(sfd, request, rv)) {
-        perror("write");
+    if (rv >= (int)request_size) {
+        fprintf(stderr, "To long request header\n");
         exit(EXIT_FAILURE);
     }
+    printf("%s", request);
+	const char* hdrptr = request;
+	int hdrlen = strlen(hdrptr);
+	int wb;
+	while (hdrlen) {
+		wb = write(sfd, hdrptr, hdrlen);
+		if (wb == -1) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
+		hdrlen -= wb;
+		hdrptr += wb;
+	}
 
     int rb;
     char buffer[buff_size];
